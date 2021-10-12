@@ -1,6 +1,3 @@
-// Whole-script strict mode syntax
-"use strict";
-
 /**
 MIT License
 Copyright (c) 2020 Openlaw
@@ -20,11 +17,11 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
  */
-const { toWei } = require("../../utils/ContractUtil.js");
+import { toWei } from "web3-utils";
+import { expect } from "chai";
 
 const {
   TestFairShareCalc,
-  expect,
   expectRevert,
 } = require("../../utils/OZTestUtil.js");
 

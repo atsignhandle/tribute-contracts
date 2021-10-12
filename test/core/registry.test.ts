@@ -20,7 +20,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
  */
-
 const { fromUtf8, ETH_TOKEN } = require("../../utils/ContractUtil.js");
 
 const {
@@ -28,6 +27,8 @@ const {
   expect,
   DaoRegistry,
 } = require("../../utils/OZTestUtil.js");
+
+export {};
 
 describe("Core - Registry", () => {
   it("should not be possible to add a module with invalid id", async () => {

@@ -1,6 +1,3 @@
-// Whole-script strict mode syntax
-"use strict";
-
 /**
 MIT License
 
@@ -23,10 +20,10 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
- */
+**/
+import { toBN, sha3 } from "web3-utils";
+
 const {
-  toBN,
-  sha3,
   unitPrice,
   remaining,
   UNITS,
@@ -55,7 +52,7 @@ const {
   getVoteStepDomainDefinition,
 } = require("../../utils/offchain_voting.js");
 
-const generateMembers = (amount) => {
+const generateMembers = (amount: number) => {
   let newAccounts = [];
   for (let i = 0; i < amount; i++) {
     const account = web3.eth.accounts.create();
@@ -65,7 +62,7 @@ const generateMembers = (amount) => {
 };
 
 const members = generateMembers(10);
-const findMember = (addr) => members.find((member) => member.address === addr);
+const findMember = (addr: []) => members.find((member) => member.address === addr);
 const daoOwner = accounts[0];
 const newMember = members[0];
 const proposalCounter = proposalIdGenerator().generator;
@@ -74,6 +71,7 @@ function getProposalCounter() {
   return proposalCounter().next().value;
 }
 
+// @ts-ignore
 const onboardMember = async (dao, voting, onboarding, bank, index) => {
   const blockNumber = await web3.eth.getBlockNumber();
   const proposalId = getProposalCounter();
@@ -95,6 +93,7 @@ const onboardMember = async (dao, voting, onboarding, bank, index) => {
     timestamp: Math.floor(new Date().getTime() / 1000),
     space,
     payload: proposalPayload,
+    sig: {}
   };
 
   //signer for myAccount (its private key)
@@ -184,6 +183,12 @@ const onboardMember = async (dao, voting, onboarding, bank, index) => {
 };
 
 describe("Adapter - Offchain Voting", () => {
+  let daoInstance: any;
+  let snapshotId: any;
+  let adaptersInstance: { onboarding: any};
+  let extensionInstance: { bank: any };
+  let votingHelpersInstance: any;
+  
   before("deploy dao", async () => {
     const {
       dao,
@@ -194,20 +199,20 @@ describe("Adapter - Offchain Voting", () => {
       owner: daoOwner,
       newMember: newMember.address,
     });
-    this.dao = dao;
-    this.adapters = adapters;
-    this.extensions = extensions;
-    this.votingHelpers = votingHelpers;
-    this.snapshotId = await takeChainSnapshot();
+    daoInstance = dao;
+    adaptersInstance = adapters;
+    extensionInstance = extensions;
+    votingHelpersInstance = votingHelpers;
+    snapshotId = await takeChainSnapshot();
   });
 
   beforeEach(async () => {
-    await revertChainSnapshot(this.snapshotId);
-    this.snapshotId = await takeChainSnapshot();
+    await revertChainSnapshot(snapshotId);
+    snapshotId = await takeChainSnapshot();
   });
 
   it("should type & hash be consistent for proposals between javascript and solidity", async () => {
-    const dao = this.dao;
+    const dao = daoInstance;
 
     let blockNumber = await web3.eth.getBlockNumber();
     const proposalPayload = {
@@ -236,7 +241,7 @@ describe("Adapter - Offchain Voting", () => {
       chainId
     );
 
-    const snapshotContract = this.votingHelpers.snapshotProposalContract;
+    const snapshotContract = votingHelpersInstance.snapshotProposalContract;
     //Checking proposal type
     const solProposalMsg = await snapshotContract.PROPOSAL_MESSAGE_TYPE();
     const jsProposalMsg = TypedDataUtils.encodeType("Message", types);
@@ -289,9 +294,9 @@ describe("Adapter - Offchain Voting", () => {
 
   it("should type & hash be consistent for votes between javascript and solidity", async () => {
     const chainId = 1;
-    const dao = this.dao;
-    const offchainVoting = this.votingHelpers.offchainVoting;
-    const snapshotContract = this.votingHelpers.snapshotProposalContract;
+    const dao = daoInstance;
+    const offchainVoting = votingHelpersInstance.offchainVoting;
+    const snapshotContract = votingHelpersInstance.snapshotProposalContract;
 
     const proposalHash = sha3("test");
     const voteEntry = await createVote(proposalHash, 1, true);
@@ -328,14 +333,14 @@ describe("Adapter - Offchain Voting", () => {
   });
 
   it("should be possible to propose a new voting by signing the proposal hash", async () => {
-    const dao = this.dao;
-    const onboarding = this.adapters.onboarding;
-    const bank = this.extensions.bank;
+    const dao = daoInstance;
+    const onboarding = adaptersInstance.onboarding;
+    const bank = extensionInstance.bank;
 
     for (var i = 1; i < members.length; i++) {
       await onboardMember(
         dao,
-        this.votingHelpers.offchainVoting,
+        votingHelpersInstance.offchainVoting,
         onboarding,
         bank,
         i

@@ -1,6 +1,3 @@
-// Whole-script strict mode syntax
-"use strict";
-
 /**
 MIT License
 
@@ -23,8 +20,9 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
- */
-const { toBN, UNITS, GUILD } = require("../../utils/ContractUtil.js");
+**/
+import { toBN } from "web3-utils";
+const { UNITS, GUILD } = require("../../utils/ContractUtil.js");
 
 const {
   deployDefaultDao,
@@ -45,6 +43,11 @@ describe("Adapter - Tribute", () => {
   const daoOwner = accounts[1];
   const proposalCounter = proposalIdGenerator().generator;
 
+  let daoInstance: any;
+  let snapshotId: any;
+  let adaptersInstance: { onboarding: any; voting: any; ragequit: any; financing: any; tribute: any };
+  let extensionInstance: { bank: any };
+
   const getProposalCounter = () => {
     return proposalCounter().next().value;
   };
@@ -53,25 +56,25 @@ describe("Adapter - Tribute", () => {
     const { dao, adapters, extensions } = await deployDefaultDao({
       owner: daoOwner,
     });
-    this.dao = dao;
-    this.adapters = adapters;
-    this.extensions = extensions;
-    this.snapshotId = await takeChainSnapshot();
+    daoInstance = dao;
+    adaptersInstance = adapters;
+    extensionInstance = extensions;
+    snapshotId = await takeChainSnapshot();
   });
 
   beforeEach(async () => {
-    await revertChainSnapshot(this.snapshotId);
-    this.snapshotId = await takeChainSnapshot();
+    await revertChainSnapshot(snapshotId);
+    snapshotId = await takeChainSnapshot();
   });
 
   it("should be possible to provide ERC20 tokens in exchange for DAO units", async () => {
     const applicant = accounts[2];
     const nonMemberAccount = accounts[3];
 
-    const dao = this.dao;
-    const bank = this.extensions.bank;
-    const tribute = this.adapters.tribute;
-    const voting = this.adapters.voting;
+    const dao = daoInstance;
+    const bank = extensionInstance.bank;
+    const tribute = adaptersInstance.tribute;
+    const voting = adaptersInstance.voting;
 
     // Issue OpenLaw ERC20 Basic Token for tests
     const tokenSupply = 1000000;
@@ -157,10 +160,10 @@ describe("Adapter - Tribute", () => {
   it("should handle a tribute proposal with a failed vote", async () => {
     const applicant = accounts[2];
 
-    const dao = this.dao;
-    const bank = this.extensions.bank;
-    const tribute = this.adapters.tribute;
-    const voting = this.adapters.voting;
+    const dao = daoInstance;
+    const bank = extensionInstance.bank;
+    const tribute = adaptersInstance.tribute;
+    const voting = adaptersInstance.voting;
 
     // Issue OpenLaw ERC20 Basic Token for tests
     const tokenSupply = 1000000;
@@ -246,8 +249,8 @@ describe("Adapter - Tribute", () => {
   });
 
   it("should not be possible to process proposal that does not exist", async () => {
-    const dao = this.dao;
-    const tribute = this.adapters.tribute;
+    const dao = daoInstance;
+    const tribute = adaptersInstance.tribute;
 
     await expectRevert(
       tribute.processProposal(dao.address, "0x1", {
@@ -338,10 +341,10 @@ describe("Adapter - Tribute", () => {
   it("should not be possible to join if the requested amount exceeds the bank internal token limit", async () => {
     const applicant = accounts[2];
 
-    const dao = this.dao;
-    const bank = this.extensions.bank;
-    const tribute = this.adapters.tribute;
-    const voting = this.adapters.voting;
+    const dao = daoInstance;
+    const bank = extensionInstance.bank;
+    const tribute = adaptersInstance.tribute;
+    const voting = adaptersInstance.voting;
 
     // Issue OpenLaw ERC20 Basic Token for tests
     const tokenSupply = 1000000;

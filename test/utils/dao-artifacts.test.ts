@@ -1,8 +1,3 @@
-// Whole-script strict mode syntax
-"use strict";
-
-const expectEvent = require("@openzeppelin/test-helpers/src/expectEvent");
-const { toBN } = require("web3-utils");
 /**
 MIT License
 
@@ -26,9 +21,10 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
  */
-const { sha3 } = require("../../utils/ContractUtil.js");
+import { sha3, toBN } from "web3-utils";
 
 const { accounts, expect, DaoArtifacts } = require("../../utils/OZTestUtil.js");
+const expectEvent = require("@openzeppelin/test-helpers/src/expectEvent");
 
 describe("Utils - DaoArtifacts", () => {
   it("should be possible to create a dao artifacts contract", async () => {

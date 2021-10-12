@@ -1,6 +1,3 @@
-// Whole-script strict mode syntax
-"use strict";
-
 /**
 MIT License
 
@@ -23,10 +20,10 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
- */
+**/
+import { sha3,toBN } from "web3-utils";
+import { expect } from "chai";
 const {
-  sha3,
-  toBN,
   UNITS,
   unitPrice,
   remaining,
@@ -38,7 +35,6 @@ const {
   advanceTime,
   proposalIdGenerator,
   BatchVotingContract,
-  expect,
   deployDaoWithBatchVoting,
   takeChainSnapshot,
   revertChainSnapshot,
@@ -53,7 +49,12 @@ const {
 } = require("../../utils/offchain_voting.js");
 
 describe("Adapter - BatchVoting", () => {
-  const generateMembers = (amount) => {
+  let members: any;
+  let daoInstance: any;
+  let snapshotId: any;
+  let adaptersInstance: { onboarding: any; voting: any; configuration: any };
+
+  const generateMembers = (amount: number) => {
     let newAccounts = [];
     for (let i = 0; i < amount; i++) {
       const account = web3.eth.accounts.create();
@@ -70,7 +71,7 @@ describe("Adapter - BatchVoting", () => {
   };
 
   before("deploy dao", async () => {
-    this.members = generateMembers(5).sort((a, b) =>
+    members = generateMembers(5).sort((a, b) =>
       a.address.toLowerCase() < b.address.toLowerCase()
         ? -1
         : a.address.toLowerCase() > b.address.toLowerCase()
@@ -79,25 +80,22 @@ describe("Adapter - BatchVoting", () => {
     );
     const {
       dao,
-      adapters,
-      extensions,
-      votingHelpers,
+      adapters
     } = await deployDaoWithBatchVoting({
       owner,
-      newMember: this.members[0].address,
+      newMember: members[0].address,
     });
-    this.dao = dao;
-    this.adapters = adapters;
-    this.extensions = extensions;
-    this.votingHelpers = votingHelpers;
-    this.snapshotId = await takeChainSnapshot();
+    daoInstance = dao;
+    adaptersInstance = adapters;
+    snapshotId = await takeChainSnapshot();
   });
 
   beforeEach(async () => {
-    await revertChainSnapshot(this.snapshotId);
-    this.snapshotId = await takeChainSnapshot();
+    await revertChainSnapshot(snapshotId);
+    snapshotId = await takeChainSnapshot();
   });
 
+  // @ts-ignore
   const onboardMember = async (dao, voting, onboarding, index) => {
     const blockNumber = await web3.eth.getBlockNumber();
     const proposalId = getProposalCounter();
@@ -119,10 +117,11 @@ describe("Adapter - BatchVoting", () => {
       timestamp: Math.floor(new Date().getTime() / 1000),
       space,
       payload: proposalPayload,
+      sig: {}
     };
 
     //signer for myAccount (its private key)
-    const signer = SigUtilSigner(this.members[0].privateKey);
+    const signer = SigUtilSigner(members[0].privateKey);
     proposalData.sig = await signer(
       proposalData,
       dao.address,
@@ -140,7 +139,7 @@ describe("Adapter - BatchVoting", () => {
     await onboarding.submitProposal(
       dao.address,
       proposalId,
-      this.members[1].address,
+      members[1].address,
       UNITS,
       unitPrice.mul(toBN(3)).add(remaining),
       prepareVoteProposalData(proposalData, web3),
@@ -151,10 +150,10 @@ describe("Adapter - BatchVoting", () => {
 
     const voteEntries = [];
     for (let i = 0; i < index; i++) {
-      const voteSigner = SigUtilSigner(this.members[i].privateKey);
+      const voteSigner = SigUtilSigner(members[i].privateKey);
       const voteEntry = await createVote(
         proposalHash,
-        this.members[i].address,
+        members[i].address,
         true
       );
       const sig = voteSigner(
@@ -166,7 +165,7 @@ describe("Adapter - BatchVoting", () => {
 
       const prepareVoteEntry = {
         vote: voteEntry,
-        memberAddress: this.members[i].address,
+        memberAddress: members[i].address,
         sig,
       };
       voteEntries.push(prepareVoteEntry);
@@ -174,7 +173,7 @@ describe("Adapter - BatchVoting", () => {
       expect(
         validateMessage(
           voteEntry,
-          this.members[i].address,
+          members[i].address,
           dao.address,
           onboarding.address,
           chainId,
@@ -204,15 +203,15 @@ describe("Adapter - BatchVoting", () => {
   };
 
   it("should be possible to propose a new voting by signing the proposal hash", async () => {
-    const dao = this.dao;
-    const onboarding = this.adapters.onboarding;
+    const dao = daoInstance;
+    const onboarding = adaptersInstance.onboarding;
 
     const batchVotingAddr = await dao.getAdapterAddress(sha3("voting"));
     const voting = await BatchVotingContract.at(batchVotingAddr);
     const adapterName = await voting.getAdapterName();
     expect(adapterName).equal("BatchVotingContract");
 
-    for (var i = 0; i < this.members.length; i++) {
+    for (var i = 0; i < members.length; i++) {
       await onboardMember(dao, voting, onboarding, i);
     }
   });

@@ -1,6 +1,3 @@
-// Whole-script strict mode syntax
-"use strict";
-
 /**
 MIT License
 
@@ -23,7 +20,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
- */
+**/
 const {
   toBN,
   unitPrice,
@@ -32,6 +29,8 @@ const {
   ETH_TOKEN,
   sha3,
 } = require("../../utils/ContractUtil.js");
+
+export {};
 
 const {
   deployDefaultNFTDao,
@@ -50,6 +49,12 @@ describe("Adapter - TributeNFT", () => {
   const proposalCounter = proposalIdGenerator().generator;
   const daoOwner = accounts[1];
 
+  let daoInstance: any;
+  let snapshotId: any;
+  let adaptersInstance: { onboarding: any; voting: any; daoRegistryAdapter: any; tributeNFT: any};
+  let extensionInstance: { bank: any; nft: any };
+  let testContractsInstance: { bank: any; pixelNFT: any; };
+
   const getProposalCounter = () => {
     return proposalCounter().next().value;
   };
@@ -61,23 +66,23 @@ describe("Adapter - TributeNFT", () => {
       extensions,
       testContracts,
     } = await deployDefaultNFTDao({ owner: daoOwner });
-    this.dao = dao;
-    this.adapters = adapters;
-    this.extensions = extensions;
-    this.testContracts = testContracts;
-    this.snapshotId = await takeChainSnapshot();
+    daoInstance = dao;
+    adaptersInstance = adapters;
+    extensionInstance = extensions;
+    testContractsInstance = testContracts;
+    snapshotId = await takeChainSnapshot();
   });
 
   beforeEach(async () => {
-    await revertChainSnapshot(this.snapshotId);
-    this.snapshotId = await takeChainSnapshot();
+    await revertChainSnapshot(snapshotId);
+    snapshotId = await takeChainSnapshot();
   });
 
   it("should be possible to submit and sponsor a nft tribute proposal", async () => {
     const nftOwner = accounts[2];
-    const dao = this.dao;
-    const pixelNFT = this.testContracts.pixelNFT;
-    const tributeNFT = this.adapters.tributeNFT;
+    const dao = daoInstance;
+    const pixelNFT = testContractsInstance.pixelNFT;
+    const tributeNFT = adaptersInstance.tributeNFT;
 
     await pixelNFT.mintPixel(nftOwner, 1, 1, { from: daoOwner });
     let pastEvents = await pixelNFT.getPastEvents();
@@ -96,9 +101,9 @@ describe("Adapter - TributeNFT", () => {
   });
 
   it("should not possible to submit a nft tribute if applicant uses a reserved address", async () => {
-    const dao = this.dao;
-    const tributeNFT = this.adapters.tributeNFT;
-    const pixelNFT = this.testContracts.pixelNFT;
+    const dao = daoInstance;
+    const tributeNFT = adaptersInstance.tributeNFT;
+    const pixelNFT = testContractsInstance.pixelNFT;
 
     const nftOwner = accounts[2];
     await pixelNFT.mintPixel(nftOwner, 1, 1, { from: daoOwner });
@@ -123,9 +128,9 @@ describe("Adapter - TributeNFT", () => {
   it("should not be possible to submit and sponsor a nft tribute proposal if it is called by a non member", async () => {
     const nftOwner = accounts[2];
     const proposalId = getProposalCounter();
-    const dao = this.dao;
-    const pixelNFT = this.testContracts.pixelNFT;
-    const tributeNFT = this.adapters.tributeNFT;
+    const dao = daoInstance;
+    const pixelNFT = testContractsInstance.pixelNFT;
+    const tributeNFT = adaptersInstance.tributeNFT;
 
     await pixelNFT.mintPixel(nftOwner, 1, 1, { from: daoOwner });
     let pastEvents = await pixelNFT.getPastEvents();
@@ -148,12 +153,12 @@ describe("Adapter - TributeNFT", () => {
   it("should be possible to process a nft tribute proposal", async () => {
     const nftOwner = accounts[2];
     const proposalId = getProposalCounter();
-    const dao = this.dao;
-    const bank = this.extensions.bank;
-    const nftExt = this.extensions.nft;
-    const pixelNFT = this.testContracts.pixelNFT;
-    const tributeNFT = this.adapters.tributeNFT;
-    const voting = this.adapters.voting;
+    const dao = daoInstance;
+    const bank = extensionInstance.bank;
+    const nftExt = extensionInstance.nft;
+    const pixelNFT = testContractsInstance.pixelNFT;
+    const tributeNFT = adaptersInstance.tributeNFT;
+    const voting = adaptersInstance.voting;
 
     await pixelNFT.mintPixel(nftOwner, 1, 1, { from: daoOwner });
     let pastEvents = await pixelNFT.getPastEvents();
@@ -204,8 +209,8 @@ describe("Adapter - TributeNFT", () => {
 
   it("should not be possible to process a nft tribute proposal if it does not exist", async () => {
     const proposalId = getProposalCounter();
-    const dao = this.dao;
-    const tributeNFT = this.adapters.tributeNFT;
+    const dao = daoInstance;
+    const tributeNFT = adaptersInstance.tributeNFT;
 
     await expectRevert(
       tributeNFT.processProposal(dao.address, proposalId, {
@@ -219,12 +224,12 @@ describe("Adapter - TributeNFT", () => {
   it("should not transfer the nft tribute from the owner if the proposal did not pass", async () => {
     const nftOwner = accounts[2];
     const proposalId = getProposalCounter();
-    const dao = this.dao;
-    const bank = this.extensions.bank;
-    const nftExt = this.extensions.nft;
-    const pixelNFT = this.testContracts.pixelNFT;
-    const tributeNFT = this.adapters.tributeNFT;
-    const voting = this.adapters.voting;
+    const dao = daoInstance;
+    const bank = extensionInstance.bank;
+    const nftExt = extensionInstance.nft;
+    const pixelNFT = testContractsInstance.pixelNFT;
+    const tributeNFT = adaptersInstance.tributeNFT;
+    const voting = adaptersInstance.voting;
 
     await pixelNFT.mintPixel(nftOwner, 1, 1, { from: daoOwner });
     let pastEvents = await pixelNFT.getPastEvents();
@@ -277,18 +282,18 @@ describe("Adapter - TributeNFT", () => {
     const nftOwner = accounts[2];
     const newMemberA = accounts[3];
     const proposalId = getProposalCounter();
-    const dao = this.dao;
-    const bank = this.extensions.bank;
-    const nftExt = this.extensions.nft;
-    const pixelNFT = this.testContracts.pixelNFT;
-    const tributeNFT = this.adapters.tributeNFT;
-    const voting = this.adapters.voting;
+    const dao = daoInstance;
+    const bank = extensionInstance.bank;
+    const nftExt = extensionInstance.nft;
+    const pixelNFT = testContractsInstance.pixelNFT;
+    const tributeNFT = adaptersInstance.tributeNFT;
+    const voting = adaptersInstance.voting;
 
     await onboardingNewMember(
       getProposalCounter(),
       dao,
-      this.adapters.onboarding,
-      this.adapters.voting,
+      adaptersInstance.onboarding,
+      adaptersInstance.voting,
       newMemberA,
       daoOwner,
       unitPrice.mul(toBN(10)),
@@ -353,11 +358,11 @@ describe("Adapter - TributeNFT", () => {
   it("should not be possible to process a proposal that was not voted", async () => {
     const nftOwner = accounts[2];
     const proposalId = getProposalCounter();
-    const dao = this.dao;
-    const bank = this.extensions.bank;
-    const nftExt = this.extensions.nft;
-    const pixelNFT = this.testContracts.pixelNFT;
-    const tributeNFT = this.adapters.tributeNFT;
+    const dao = daoInstance;
+    const bank = extensionInstance.bank;
+    const nftExt = extensionInstance.nft;
+    const pixelNFT = testContractsInstance.pixelNFT;
+    const tributeNFT = adaptersInstance.tributeNFT;
 
     await pixelNFT.mintPixel(nftOwner, 1, 1, { from: daoOwner });
     let pastEvents = await pixelNFT.getPastEvents();
@@ -404,12 +409,12 @@ describe("Adapter - TributeNFT", () => {
   it("should not be possible to issue internal tokens and complete NFT transfer if the requested amount exceeds the bank internal token limit", async () => {
     const nftOwner = accounts[2];
     const proposalId = getProposalCounter();
-    const dao = this.dao;
-    const bank = this.extensions.bank;
-    const nftExt = this.extensions.nft;
-    const pixelNFT = this.testContracts.pixelNFT;
-    const tributeNFT = this.adapters.tributeNFT;
-    const voting = this.adapters.voting;
+    const dao = daoInstance;
+    const bank = extensionInstance.bank;
+    const nftExt = extensionInstance.nft;
+    const pixelNFT = testContractsInstance.pixelNFT;
+    const tributeNFT = adaptersInstance.tributeNFT;
+    const voting = adaptersInstance.voting;
 
     await pixelNFT.mintPixel(nftOwner, 1, 1, { from: daoOwner });
     let pastEvents = await pixelNFT.getPastEvents();

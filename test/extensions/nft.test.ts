@@ -1,6 +1,3 @@
-// Whole-script strict mode syntax
-"use strict";
-
 /**
 MIT License
 
@@ -23,20 +20,26 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
- */
-const { toBN, GUILD } = require("../../utils/ContractUtil.js");
+**/
+import { toBN } from "web3-utils";
+import { expect } from "chai";
+const { GUILD } = require("../../utils/ContractUtil.js");
 
 const {
   takeChainSnapshot,
   revertChainSnapshot,
   deployDefaultNFTDao,
   accounts,
-  expectRevert,
-  expect,
+  expectRevert
 } = require("../../utils/OZTestUtil.js");
 
 describe("Extension - NFT", () => {
   const daoOwner = accounts[0];
+  let daoInstance: any;
+  let extensionsInstance: { nft: any; };
+  let adaptersInstance: any;
+  let testContractsInstance: any;
+  let snapshotIdInstance: any;
 
   before("deploy dao", async () => {
     const {
@@ -45,35 +48,35 @@ describe("Extension - NFT", () => {
       extensions,
       testContracts,
     } = await deployDefaultNFTDao({ owner: daoOwner });
-    this.dao = dao;
-    this.adapters = adapters;
-    this.extensions = extensions;
-    this.testContracts = testContracts;
+    daoInstance= dao;
+    adaptersInstance = adapters;
+    extensionsInstance = extensions;
+    testContractsInstance = testContracts;
   });
 
   beforeEach(async () => {
-    this.snapshotId = await takeChainSnapshot();
+    snapshotIdInstance = await takeChainSnapshot();
   });
 
   afterEach(async () => {
-    await revertChainSnapshot(this.snapshotId);
+    await revertChainSnapshot(snapshotIdInstance);
   });
 
   it("should be possible to create a dao with a nft extension pre-configured", async () => {
-    const nftExtension = this.extensions.nft;
+    const nftExtension = extensionsInstance.nft;
     expect(nftExtension).to.not.be.null;
   });
 
   it("should be possible check how many NFTs are in the collection", async () => {
-    const nftExtension = this.extensions.nft;
-    const pixelNFT = this.testContracts.pixelNFT;
+    const nftExtension = extensionsInstance.nft;
+    const pixelNFT = testContractsInstance.pixelNFT;
     const total = await nftExtension.nbNFTs(pixelNFT.address);
     expect(total.toString()).equal("0");
   });
 
   it("should not be possible get an NFT in the collection if it is empty", async () => {
-    const nftExtension = this.extensions.nft;
-    const pixelNFT = this.testContracts.pixelNFT;
+    const nftExtension = extensionsInstance.nft;
+    const pixelNFT = testContractsInstance.pixelNFT;
     await expectRevert(
       nftExtension.getNFT(pixelNFT.address, 0),
       "index out of bounds"
@@ -81,8 +84,8 @@ describe("Extension - NFT", () => {
   });
 
   it("should not be possible to return a NFT without the RETURN permission", async () => {
-    const nftExtension = this.extensions.nft;
-    const pixelNFT = this.testContracts.pixelNFT;
+    const nftExtension = extensionsInstance.nft;
+    const pixelNFT = testContractsInstance.pixelNFT;
     await expectRevert(
       nftExtension.withdrawNFT(accounts[1], pixelNFT.address, 1),
       "nft::accessDenied"
@@ -90,21 +93,21 @@ describe("Extension - NFT", () => {
   });
 
   it("should be possible check how many NFTs are in the collection", async () => {
-    const nftExtension = this.extensions.nft;
+    const nftExtension = extensionsInstance.nft;
     const total = await nftExtension.nbNFTAddresses();
     expect(total.toString()).equal("0");
   });
 
   it("should not be possible to initialize the extension if it was already initialized", async () => {
-    const nftExtension = this.extensions.nft;
+    const nftExtension = extensionsInstance.nft;
     await expectRevert(
-      nftExtension.initialize(this.dao.address, accounts[0]),
+      nftExtension.initialize(daoInstance.address, accounts[0]),
       "already initialized"
     );
   });
 
   it("should be possible to collect a NFT that is allowed", async () => {
-    const pixelNFT = this.testContracts.pixelNFT;
+    const pixelNFT = testContractsInstance.pixelNFT;
 
     const nftOwner = accounts[1];
     await pixelNFT.mintPixel(nftOwner, 1, 1);
@@ -117,14 +120,14 @@ describe("Extension - NFT", () => {
     expect(metadata).equal("pixel: 1,1");
     expect(owner).equal(nftOwner);
 
-    const nftExtension = this.extensions.nft;
+    const nftExtension = extensionsInstance.nft;
     await pixelNFT.approve(nftExtension.address, tokenId, {
       from: nftOwner,
       gasPrice: toBN("0"),
     });
 
-    const nftAdapter = this.adapters.nftAdapter;
-    await nftAdapter.collect(this.dao.address, pixelNFT.address, tokenId, {
+    const nftAdapter = adaptersInstance.nftAdapter;
+    await nftAdapter.collect(daoInstance.address, pixelNFT.address, tokenId, {
       from: nftOwner,
       gasPrice: toBN("0"),
     });
